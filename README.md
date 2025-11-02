@@ -24,8 +24,8 @@ Through testing, we discovered:
 
 ### 1. Data Logging (Arduino UNO Q)
 - **Files:** `main.py` (Python brick) + `sketch.ino` (microcontroller code)
-- **Demo mode:** Logs dummy data every 2 seconds (current `main.py`)
-- **Hardware mode:** Logs real GPIO data from pin 2 via Bridge (see [SKETCH_INFO.md](SKETCH_INFO.md))
+- Logs real GPIO data from pin 2 via Bridge communication
+- Microcontroller sends data every 5 seconds
 - Uses Arduino's `SQLStore` brick inside a Docker container
 - Data accumulates and persists across reboots
 
@@ -37,48 +37,45 @@ Through testing, we discovered:
 
 ### 3. Web Viewer (Debian Host)
 - **Location:** `~/Desktop/Python Scripts/web_viewer.py` (on Arduino)
-- Flask-based web application
-- Displays data in a browser-accessible interface
-- Auto-refreshes every 5 seconds
-- Accessible from any device on the network
+- Flask-based web application with enhanced features:
+  - Auto-export from Docker container on every refresh
+  - Clear all data with confirmation dialog
+  - Export to CSV with timestamp
+  - Statistics dashboard (entry counts, file size, state distribution)
+  - Auto-refreshes every 5 seconds
+  - Accessible from any device on the network
 
 ## Files in This Directory
 
 ### Core Application Files
 
 - **`main.py`** - Python brick code (runs in Docker container)
-  - Current version: Demo mode with dummy data
-  - Can be modified for hardware mode (see SKETCH_INFO.md)
+  - Receives data from microcontroller via Bridge
+  - Logs GPIO states to SQLite database
+  - Works with sketch.ino for real hardware monitoring
 
 - **`sketch.ino`** - Microcontroller code (runs on RP2350)
   - Reads GPIO input from pin 2
-  - Controls LED based on input
+  - Controls LED based on input (blinks when HIGH, off when LOW)
   - Sends data to Python via Bridge every 5 seconds
   - See [SKETCH_INFO.md](SKETCH_INFO.md) for details
 
 ### Helper Scripts (Deploy to Arduino)
 
-- **`scripts/export_gpio_data.py`** - Extracts database from Docker container
-- **`scripts/web_viewer.py`** - Flask web server for viewing data
-- **`templates/index.html`** - Web interface UI
+- **`scripts/export_gpio_data.py`** - Manual database extractor (optional, web viewer auto-exports)
+- **`scripts/web_viewer.py`** - Enhanced Flask web server with:
+  - Automatic database export from container
+  - Clear database functionality
+  - CSV export with timestamp
+  - Real-time statistics
+- **`templates/index.html`** - Modern web interface with color-coded stats and controls
 
-### Reference Files (For Understanding/Alternative Approaches)
+### Documentation
 
-- **`enhanced_brick.py`** - Enhanced version of main.py with export functions
-  - Includes `export_database()` and `export_to_csv()` functions
-  - Alternative approach: export from within the container
-  - Not actively used, but shows another solution method
-
-- **`extract_db.sh`** - Bash script for database extraction
-  - Alternative to the Python export script
-  - More verbose with error checking
-  - Located on Arduino instead
-
-- **`EXTRACTION_GUIDE.md`** - Comprehensive manual extraction guide
-  - Docker commands reference
-  - Multiple extraction methods
-  - Troubleshooting tips
-  - Useful for manual database access
+- **`README.md`** - This file, comprehensive project documentation
+- **`QUICKSTART.md`** - Quick reference guide for daily use
+- **`INSTALL.md`** - Step-by-step installation guide for beginners
+- **`SKETCH_INFO.md`** - Arduino sketch details and hardware setup
 
 ## Setup Instructions
 
