@@ -10,7 +10,7 @@ unsigned long previousMillis = 0;
 unsigned long logMillis = 0;
 
 const long blinkInterval = 500;
-const long logInterval = 5000;  // Log every 5 seconds
+const long logInterval = 100;  // Log every 0.1 seconds
 
 bool ledState = HIGH;
 
