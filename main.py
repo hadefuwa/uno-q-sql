@@ -1,6 +1,5 @@
 from datetime import datetime
-import time
-from arduino.app_utils import App
+from arduino.app_utils import App, Bridge
 from arduino.app_bricks.dbstorage_sqlstore import SQLStore
 
 db = SQLStore("database.db")
@@ -17,36 +16,27 @@ db.create_table("gpio_log", columns)
 result = db.read("gpio_log")
 print(f"✓ Existing entries: {len(result)}\n")
 
-def log_dummy_data():
-    """Continuously log dummy data every 2 seconds"""
-    counter = 0
-    while True:
-        try:
-            # Alternate between 1 and 0
-            value = counter % 2
+def log_data(pin_state, led_state):
+    """Called by microcontroller via Bridge.call() every 5 seconds"""
+    try:
+        data = {
+            "timestamp": datetime.now().isoformat(),
+            "pin_state": int(pin_state),
+            "led_state": int(led_state)
+        }
+        db.store("gpio_log", data)
 
-            data = {
-                "timestamp": datetime.now().isoformat(),
-                "pin_state": value,
-                "led_state": value
-            }
-            db.store("gpio_log", data)
+        all_data = db.read("gpio_log")
+        print(f"Entry #{len(all_data)}: pin={pin_state}, led={led_state}")
+        return True
+    except Exception as e:
+        print(f"Error: {e}")
+        return False
 
-            counter += 1
-            all_data = db.read("gpio_log")
-            print(f"Entry #{len(all_data)}: pin={value}, led={value} [total logged this session: {counter}]")
+# Provide the log_data function to the microcontroller
+Bridge.provide("log_data", log_data)
 
-            time.sleep(2)  # Log every 2 seconds
-        except Exception as e:
-            print(f"Error: {e}")
-            time.sleep(2)
-
-print("Database ready. Starting dummy data logging...\n")
-
-# Start logging dummy data in the background
-import threading
-logger_thread = threading.Thread(target=log_dummy_data, daemon=True)
-logger_thread.start()
+print("Database ready. Waiting for data from microcontroller...\n")
 
 # Keep app running - this launches and maintains the Docker container
 App.run()
