@@ -23,8 +23,9 @@ Through testing, we discovered:
 ## Solution Architecture
 
 ### 1. Data Logging (Arduino UNO Q)
-- **File:** `main.py` (deployed on Arduino)
-- Logs dummy data every 2 seconds (alternating 0 and 1 values)
+- **Files:** `main.py` (Python brick) + `sketch.ino` (microcontroller code)
+- **Demo mode:** Logs dummy data every 2 seconds (current `main.py`)
+- **Hardware mode:** Logs real GPIO data from pin 2 via Bridge (see [SKETCH_INFO.md](SKETCH_INFO.md))
 - Uses Arduino's `SQLStore` brick inside a Docker container
 - Data accumulates and persists across reboots
 
@@ -43,12 +44,23 @@ Through testing, we discovered:
 
 ## Files in This Directory
 
-### Active Files (Used in Solution)
+### Core Application Files
 
-- **`main.py`** - Arduino UNO Q brick code that logs data to SQLite
-  - Deploys as Docker container on Arduino
-  - Logs alternating 0/1 values every 2 seconds
-  - Uses threading to run continuously
+- **`main.py`** - Python brick code (runs in Docker container)
+  - Current version: Demo mode with dummy data
+  - Can be modified for hardware mode (see SKETCH_INFO.md)
+
+- **`sketch.ino`** - Microcontroller code (runs on RP2350)
+  - Reads GPIO input from pin 2
+  - Controls LED based on input
+  - Sends data to Python via Bridge every 5 seconds
+  - See [SKETCH_INFO.md](SKETCH_INFO.md) for details
+
+### Helper Scripts (Deploy to Arduino)
+
+- **`scripts/export_gpio_data.py`** - Extracts database from Docker container
+- **`scripts/web_viewer.py`** - Flask web server for viewing data
+- **`templates/index.html`** - Web interface UI
 
 ### Reference Files (For Understanding/Alternative Approaches)
 
