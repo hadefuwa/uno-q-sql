@@ -9,7 +9,7 @@
             background: #f5f5f5;
         }
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             background: white;
             padding: 20px;
@@ -21,13 +21,48 @@
             border-bottom: 2px solid #007bff;
             padding-bottom: 10px;
         }
-        .stats {
+        .controls {
             display: flex;
-            gap: 20px;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
             margin: 20px 0;
         }
         .stat-box {
-            flex: 1;
             padding: 15px;
             background: #007bff;
             color: white;
@@ -40,8 +75,17 @@
             opacity: 0.9;
         }
         .stat-box .value {
-            font-size: 32px;
+            font-size: 28px;
             font-weight: bold;
+        }
+        .stat-box.green {
+            background: #28a745;
+        }
+        .stat-box.orange {
+            background: #fd7e14;
+        }
+        .stat-box.purple {
+            background: #6f42c1;
         }
         table {
             width: 100%;
@@ -61,21 +105,6 @@
         tr:hover {
             background: #f9f9f9;
         }
-        .refresh-btn {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .refresh-btn:hover {
-            background: #218838;
-        }
-        .auto-refresh {
-            margin: 10px 0;
-        }
         .error {
             background: #dc3545;
             color: white;
@@ -83,35 +112,59 @@
             border-radius: 5px;
             margin: 10px 0;
         }
+        .success {
+            background: #28a745;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .info-text {
+            color: #666;
+            font-size: 14px;
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>GPIO Data Monitor</h1>
-        
-        <div class="auto-refresh">
-            <button class="refresh-btn" onclick="loadData()">Refresh Data</button>
-            <label>
-                <input type="checkbox" id="autoRefresh" checked> Auto-refresh every 5 seconds
+
+        <div class="controls">
+            <button class="btn-success" onclick="loadData()">Refresh Data</button>
+            <button class="btn-primary" onclick="exportCSV()">Export CSV</button>
+            <button class="btn-danger" onclick="clearDatabase()">Clear All Data</button>
+            <label style="margin-left: auto; align-self: center;">
+                <input type="checkbox" id="autoRefresh" checked> Auto-refresh (5s)
             </label>
         </div>
+
+        <div id="error" style="display:none;" class="error"></div>
+        <div id="success" style="display:none;" class="success"></div>
 
         <div class="stats">
             <div class="stat-box">
                 <h3>Total Entries</h3>
                 <div class="value" id="totalEntries">-</div>
             </div>
-            <div class="stat-box">
+            <div class="stat-box green">
                 <h3>Latest Pin State</h3>
                 <div class="value" id="latestPin">-</div>
             </div>
-            <div class="stat-box">
+            <div class="stat-box orange">
                 <h3>Latest LED State</h3>
                 <div class="value" id="latestLed">-</div>
             </div>
+            <div class="stat-box purple">
+                <h3>Database Size</h3>
+                <div class="value" id="dbSize">-</div>
+            </div>
         </div>
 
-        <div id="error" style="display:none;" class="error"></div>
+        <div class="info-text">
+            <div>First Entry: <span id="firstTime">-</span></div>
+            <div>Last Entry: <span id="lastTime">-</span></div>
+        </div>
 
         <h2>Recent Entries (Last 100)</h2>
         <table>
@@ -130,30 +183,49 @@
     </div>
 
     <script>
+        function showError(message) {
+            const errorDiv = document.getElementById("error");
+            errorDiv.textContent = message;
+            errorDiv.style.display = "block";
+            setTimeout(() => errorDiv.style.display = "none", 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById("success");
+            successDiv.textContent = message;
+            successDiv.style.display = "block";
+            setTimeout(() => successDiv.style.display = "none", 3000);
+        }
+
         function loadData() {
             fetch("/api/data")
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
-                        document.getElementById("error").style.display = "block";
-                        document.getElementById("error").textContent = "Error: " + data.error;
+                        showError("Error: " + data.error);
                         return;
                     }
-                    
-                    document.getElementById("error").style.display = "none";
-                    
+
                     // Update stats
                     document.getElementById("totalEntries").textContent = data.total;
-                    
+
                     if (data.entries.length > 0) {
                         document.getElementById("latestPin").textContent = data.entries[0].pin_state;
                         document.getElementById("latestLed").textContent = data.entries[0].led_state;
                     }
-                    
+
+                    // Update timestamps
+                    if (data.first_timestamp) {
+                        document.getElementById("firstTime").textContent = new Date(data.first_timestamp).toLocaleString();
+                    }
+                    if (data.last_timestamp) {
+                        document.getElementById("lastTime").textContent = new Date(data.last_timestamp).toLocaleString();
+                    }
+
                     // Update table
                     const tbody = document.getElementById("dataTable");
                     tbody.innerHTML = "";
-                    
+
                     data.entries.forEach(entry => {
                         const row = tbody.insertRow();
                         row.insertCell(0).textContent = entry.id;
@@ -161,11 +233,49 @@
                         row.insertCell(2).textContent = entry.pin_state;
                         row.insertCell(3).textContent = entry.led_state;
                     });
+
+                    // Load stats
+                    loadStats();
                 })
                 .catch(error => {
-                    document.getElementById("error").style.display = "block";
-                    document.getElementById("error").textContent = "Failed to load data: " + error;
+                    showError("Failed to load data: " + error);
                 });
+        }
+
+        function loadStats() {
+            fetch("/api/stats")
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.error) {
+                        document.getElementById("dbSize").textContent = data.database_size_kb + " KB";
+                    }
+                })
+                .catch(error => console.log("Stats error:", error));
+        }
+
+        function clearDatabase() {
+            if (!confirm("Are you sure you want to delete ALL data? This cannot be undone!")) {
+                return;
+            }
+
+            fetch("/api/clear", { method: "POST" })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showSuccess("Database cleared successfully!");
+                        loadData();
+                    } else {
+                        showError("Failed to clear database: " + data.message);
+                    }
+                })
+                .catch(error => {
+                    showError("Error: " + error);
+                });
+        }
+
+        function exportCSV() {
+            showSuccess("Downloading CSV...");
+            window.location.href = "/api/export/csv";
         }
 
         // Auto-refresh
